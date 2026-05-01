@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="chat-header">
+        <h2>AI Chat Agent</h2>
+        <div class="header-controls">
+            <p id="msg-counter">Messages left today: 100</p>
+            <p>User: {{ name }}</p>
+            <a href="/settings" style="margin-right: 15px;">Settings</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <div class="chat-box" id="chat-box">
+        </div>
+
+    <div class="chat-input-wrapper">
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Send a message to the AI..." />
+            <button id="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+<script>
+// --- LOAD CHAT HISTORY ON STARTUP ---
+// Flask passes the history variable, we convert it to JSON so JavaScript can read it
+const chatHistory = {{ history | tojson }};
+const chatBox = document.getElementById('chat-box');
+
+// Loop through history and display it
+window.onload = function() {
+    chatHistory.forEach(msg => {
+        appendMessage(msg.sender, msg.content);
+    });
+    chatBox.scrollTop = chatBox.scrollHeight;
+};
+
+// --- ENTER KEY LISTENER ---
+document.getElementById("user-input").addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault(); 
+        sendMessage(); 
+    }
+});
+
+// --- HELPER FUNCTION TO ADD MESSAGES TO SCREEN ---
+function appendMessage(sender, content, isError = false) {
+    let msgWrapper = document.createElement('div');
+    msgWrapper.className = `message ${sender}`;
+
+    let msgContent = document.createElement('div');
+    msgContent.className = 'message-content';
+
+    // If it's the bot, parse the Markdown to HTML so tables look correct
+    if (sender === 'bot') {
+        msgContent.innerHTML = marked.parse(content);
+        if (isError) {
+            msgContent.style.color = '#ff6b6b';
+        }
+    } else {
+        // Just standard text for the user
+        msgContent.textContent = content; 
+    }
+
+    msgWrapper.appendChild(msgContent);
+    chatBox.appendChild(msgWrapper);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// --- SEND MESSAGE FUNCTION ---
+async function sendMessage() {
+    let inputField = document.getElementById('user-input');
+    let message = inputField.value;
+
+    if (message.trim() === "") return;
+
+    // Show user message instantly
+    appendMessage('user', message);
+    inputField.value = "";
+
+    // Send to Flask Backend
+    let response = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message })
+    });
+
+    let data = await response.json();
+
+    // Check for free tier limit
+    if (data.limit_reached) {
+        appendMessage('bot', data.reply, true);
+        document.getElementById('user-input').disabled = true;
+        document.getElementById('user-input').placeholder = "Limit reached. Upgrade to Premium.";
+        document.getElementById('send-btn').disabled = true;
+    } else {
+        appendMessage('bot', data.reply);
+        if (data.messages_left !== undefined) {
+            document.getElementById('msg-counter').textContent = "Messages left today: " + data.messages_left;
+        }
+    }
+}
+</script>
+</body>
+</html>

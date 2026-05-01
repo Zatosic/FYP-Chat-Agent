@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Integration Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="chat-header">
+        <h2>Integration Settings</h2>
+        <div class="header-controls">
+            <a href="/">Back to Chat</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <div class="settings-container">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <p style="color: #10a37f; font-weight: bold; margin-bottom: 15px;">{{ messages[0] }}</p>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/settings">
+            <h3>WhatsApp Integration</h3>
+            <div class="form-group">
+                <label>WhatsApp Number</label>
+                <input type="text" name="wa_number" placeholder="+1234567890" value="{{ settings.wa_number if settings else '' }}">
+            </div>
+            <div class="form-group">
+                <label>WhatsApp API Key</label>
+                <input type="password" name="wa_api_key" placeholder="Enter API Key" value="{{ settings.wa_api_key if settings else '' }}">
+            </div>
+
+            <h3>E-Commerce Integration</h3>
+            <div class="form-group">
+                <label>Store Type</label>
+                <select name="store_type">
+                    <option value="Shopify" {% if settings and settings.store_type == 'Shopify' %}selected{% endif %}>Shopify</option>
+                    <option value="WooCommerce" {% if settings and settings.store_type == 'WooCommerce' %}selected{% endif %}>WooCommerce</option>
+                    <option value="Custom" {% if settings and settings.store_type == 'Custom' %}selected{% endif %}>Custom API</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Store URL</label>
+                <input type="text" name="store_url" placeholder="https://yourstore.com" value="{{ settings.store_url if settings else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Store API Key</label>
+                <input type="password" name="store_api_key" placeholder="Enter Store API Key" value="{{ settings.store_api_key if settings else '' }}">
+            </div>
+
+            <button type="submit" class="save-btn">Save Configurations</button>
+        </form>
+    </div>
+</body>
+</html>

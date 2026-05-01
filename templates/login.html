@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AI Chat Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f4f9;">
+    <div
+        style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center;">
+        <h2 style="color: #4CAF50; margin-bottom: 20px;">Welcome Back!</h2>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div style="color: red; margin-bottom: 15px; font-size: 14px;">{{ messages[0] }}</div>
+        {% endif %}
+        {% endwith %}
+
+        <form action="/login" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+            <input type="email" name="email" placeholder="Email Address" required
+                style="padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+            <input type="password" name="password" placeholder="Password" required
+                style="padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+            <button type="submit"
+                style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Login</button>
+        </form>
+
+        <div style="text-align: center; margin-top: 15px;">
+            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Or</p>
+            <a href="/login/google" 
+               style="display: block; padding: 10px; background-color: #4285F4; color: white; text-decoration: none; border-radius: 5px; font-size: 16px;">
+               Sign in with Google
+            </a>
+        </div>
+        <p style="margin-top: 20px; font-size: 14px;">Don't have an account? <a href="/signup"
+                style="color: #4CAF50; text-decoration: none;">Sign up here</a></p>
+    </div>
+</body>
+
+</html>
