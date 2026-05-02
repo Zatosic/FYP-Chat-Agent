@@ -1,112 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat Agent</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>FYP Chat Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade { animation: fadeIn 0.4s ease-out forwards; }
+        
+        .prose h1, .prose h2, .prose h3 { color: #60a5fa; font-weight: bold; margin-top: 10px; }
+        .prose ul { list-style-type: disc; padding-left: 20px; margin: 10px 0; }
+        .prose table { width: 100%; border-collapse: collapse; margin: 10px 0; background: #1f2937; }
+        .prose th, .prose td { border: 1px solid #374151; padding: 8px; text-align: left; }
+        .prose strong { color: #fff; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+    </style>
 </head>
-<body>
-    <div class="chat-header">
-        <h2>AI Chat Agent</h2>
-        <div class="header-controls">
-            <p id="msg-counter">Messages left today: 100</p>
-            <p>User: {{ name }}</p>
-            <a href="/settings" style="margin-right: 15px;">Settings</a>
-            <a href="/logout">Logout</a>
+
+<body class="bg-gray-900 text-white h-screen flex overflow-hidden font-sans">
+
+    <aside class="w-64 bg-gray-800 p-4 flex flex-col border-r border-gray-700 hidden md:flex">
+        <button onclick="startNewChat()" class="w-full bg-blue-600 hover:bg-blue-700 transition-all text-white font-bold py-3 px-4 rounded-lg mb-6 shadow-lg flex items-center justify-center gap-2">
+            New Chat
+        </button>
+
+        <div class="mb-6 px-2">
+            <h3 class="text-[10px] text-gray-500 font-bold uppercase mb-2 tracking-widest">Knowledge Base</h3>
+            <input type="file" id="kb-upload" class="hidden" onchange="uploadKnowledgeFile()">
+            <button onclick="document.getElementById('kb-upload').click()" class="w-full border border-gray-600 text-gray-300 text-xs py-2 rounded flex items-center justify-center gap-2 hover:border-blue-500 hover:text-white transition-all">
+                📁 Upload .txt File
+            </button>
+            <p id="upload-status" class="text-[10px] mt-1 text-center italic text-gray-500"></p>
         </div>
-    </div>
 
-    <div class="chat-box" id="chat-box">
+        <div class="flex-1 overflow-y-auto">
+            <h3 class="text-xs text-gray-400 font-semibold mb-3 uppercase tracking-wider px-2">Recent History</h3>
+            <ul id="chat-list" class="space-y-1">
+                {% for session in chat_sessions %}
+                <li class="group relative">
+                    <a href="/chat/{{ session.id }}" 
+                       class="block w-full text-left p-2 rounded-md hover:bg-gray-700 text-sm transition-colors truncate pr-8
+                       {% if session.id == active_session %} bg-gray-700 text-blue-400 border-l-2 border-blue-500 {% else %} text-gray-300 {% endif %}">
+                        {{ session.title }}
+                    </a>
+                    <!-- ADDED: Delete Button (Visible on hover) -->
+                    <button onclick="deleteChat('{{ session.id }}')" class="absolute right-2 top-2.5 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-500 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
         </div>
 
-    <div class="chat-input-wrapper">
-        <div class="chat-input">
-            <input type="text" id="user-input" placeholder="Send a message to the AI..." />
-            <button id="send-btn" onclick="sendMessage()">Send</button>
+        <div class="mt-auto border-t border-gray-700 pt-4">
+            <div class="px-2 mb-3">
+                <p class="text-sm text-gray-400">Current User:</p>
+                <p class="font-semibold truncate text-blue-400">{{ name }}</p>
+            </div>
+            <a href="/settings" class="block w-full p-2 rounded-md hover:bg-gray-700 text-sm text-gray-300 transition-colors">Integration Settings</a>
+            <a href="/logout" class="block w-full p-2 rounded-md hover:bg-red-900/30 text-sm text-red-400 mt-1 transition-colors">Logout</a>
         </div>
-    </div>
+    </aside>
 
-<script>
-// --- LOAD CHAT HISTORY ON STARTUP ---
-// Flask passes the history variable, we convert it to JSON so JavaScript can read it
-const chatHistory = {{ history | tojson }};
-const chatBox = document.getElementById('chat-box');
+    <main class="flex-1 flex flex-col h-full bg-gray-900">
+        <header class="bg-gray-800/50 backdrop-blur-md p-4 flex justify-between items-center border-b border-gray-700">
+            <div class="flex items-center gap-2">
+                <span class="font-bold tracking-tight text-xl">AI Chat Agent</span>
+                <span class="bg-gray-700 text-gray-400 text-[10px] px-2 py-0.5 rounded">BETA</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <p class="text-xs text-gray-400 uppercase font-bold">Daily Quota</p>
+                    <p id="quota-display" class="text-sm font-mono text-green-400">100 / 100 Left</p>
+                </div>
+            </div>
+        </header>
 
-// Loop through history and display it
-window.onload = function() {
-    chatHistory.forEach(msg => {
-        appendMessage(msg.sender, msg.content);
-    });
-    chatBox.scrollTop = chatBox.scrollHeight;
-};
+        <div id="chat-box" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+            {% if not history %}
+            <div class="flex justify-start animate-fade">
+                <div class="bg-gray-800 p-5 rounded-2xl rounded-tl-none max-w-xl border border-gray-700 shadow-xl text-sm">
+                    <h2 class="text-blue-400 font-bold mb-1">Welcome, {{ name }}!</h2>
+                    <p class="text-gray-300 leading-relaxed">Start a new conversation or select a previous chat from the history. How can I help you today?</p>
+                </div>
+            </div>
+            {% endif %}
 
-// --- ENTER KEY LISTENER ---
-document.getElementById("user-input").addEventListener("keypress", function(event) {
-    if (event.key === "Enter") {
-        event.preventDefault(); 
-        sendMessage(); 
-    }
-});
+            {% for msg in history %}
+            <div class="flex {% if msg.sender == 'user' %}justify-end{% else %}justify-start{% endif %} animate-fade">
+                <div class="p-4 rounded-2xl shadow-md {% if msg.sender == 'user' %}bg-blue-600 rounded-tr-none{% else %}bg-gray-800 rounded-tl-none border border-gray-700 prose{% endif %} max-w-[85%] text-sm">
+                    {% if msg.sender == 'bot' %}
+                    <div id="msg-{{ loop.index }}"></div>
+                    <script>document.getElementById("msg-{{ loop.index }}").innerHTML = marked.parse(`{{ msg.content | safe }}`);</script>
+                    {% else %}
+                    {{ msg.content }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
 
-// --- HELPER FUNCTION TO ADD MESSAGES TO SCREEN ---
-function appendMessage(sender, content, isError = false) {
-    let msgWrapper = document.createElement('div');
-    msgWrapper.className = `message ${sender}`;
+        <div class="p-6 bg-gray-900/80 border-t border-gray-800">
+            <div class="max-w-4xl mx-auto flex gap-3">
+                <input type="text" id="user-input" class="flex-1 bg-gray-800 border border-gray-700 p-4 rounded-xl focus:outline-none focus:border-blue-500 transition-all text-white" placeholder="Type your inquiry here...">
+                <button onclick="sendMessage()" class="bg-blue-600 hover:bg-blue-700 px-8 rounded-xl font-bold transition-all shadow-lg text-white">Send</button>
+            </div>
+        </div>
+    </main>
 
-    let msgContent = document.createElement('div');
-    msgContent.className = 'message-content';
+    <script>
+        let currentSessionId = "{{ active_session or '' }}";
 
-    // If it's the bot, parse the Markdown to HTML so tables look correct
-    if (sender === 'bot') {
-        msgContent.innerHTML = marked.parse(content);
-        if (isError) {
-            msgContent.style.color = '#ff6b6b';
+        // --- ADDED: DELETE CHAT LOGIC ---
+        async function deleteChat(sessionId) {
+            if (!confirm("Delete this conversation?")) return;
+            try {
+                const res = await fetch(`/delete_chat/${sessionId}`, { method: 'POST' });
+                if (res.ok) window.location.href = "/";
+            } catch (e) { console.error("Error deleting chat:", e); }
         }
-    } else {
-        // Just standard text for the user
-        msgContent.textContent = content; 
-    }
 
-    msgWrapper.appendChild(msgContent);
-    chatBox.appendChild(msgWrapper);
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
+        // Handle Knowledge Base Upload
+        async function uploadKnowledgeFile() {
+            const status = document.getElementById('upload-status');
+            const fileInput = document.getElementById('kb-upload');
+            if (!fileInput.files[0]) return;
 
-// --- SEND MESSAGE FUNCTION ---
-async function sendMessage() {
-    let inputField = document.getElementById('user-input');
-    let message = inputField.value;
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
 
-    if (message.trim() === "") return;
+            status.innerText = "Uploading...";
+            status.className = "text-[10px] mt-1 text-center italic text-blue-400";
 
-    // Show user message instantly
-    appendMessage('user', message);
-    inputField.value = "";
-
-    // Send to Flask Backend
-    let response = await fetch('/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: message })
-    });
-
-    let data = await response.json();
-
-    // Check for free tier limit
-    if (data.limit_reached) {
-        appendMessage('bot', data.reply, true);
-        document.getElementById('user-input').disabled = true;
-        document.getElementById('user-input').placeholder = "Limit reached. Upgrade to Premium.";
-        document.getElementById('send-btn').disabled = true;
-    } else {
-        appendMessage('bot', data.reply);
-        if (data.messages_left !== undefined) {
-            document.getElementById('msg-counter').textContent = "Messages left today: " + data.messages_left;
+            try {
+                const res = await fetch('/upload_knowledge', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    status.innerText = "✅ Knowledge Updated!";
+                    status.className = "text-[10px] mt-1 text-center italic text-green-400";
+                } else {
+                    status.innerText = "❌ " + (data.error || "Upload failed");
+                    status.className = "text-[10px] mt-1 text-center italic text-red-400";
+                }
+            } catch (e) {
+                status.innerText = "❌ Server Error";
+                status.className = "text-[10px] mt-1 text-center italic text-red-400";
+            }
         }
-    }
-}
-</script>
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatBox = document.getElementById('chat-box');
+
+            // 1. Show User Message
+            chatBox.innerHTML += `<div class="flex justify-end animate-fade"><div class="bg-blue-600 p-4 rounded-2xl rounded-tr-none max-w-[80%] shadow-md text-sm">${message}</div></div>`;
+            input.value = '';
+
+            // 2. ADDED: TYPING INDICATOR
+            const typingId = "typing-" + Date.now();
+            chatBox.innerHTML += `
+                <div id="${typingId}" class="flex justify-start animate-fade">
+                    <div class="bg-gray-800 border border-gray-700 p-4 rounded-2xl flex gap-1 shadow-md">
+                        <span class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
+                        <span class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                        <span class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                    </div>
+                </div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message, session_id: currentSessionId })
+                });
+                const data = await response.json();
+
+                // 3. REMOVE TYPING INDICATOR
+                const loader = document.getElementById(typingId);
+                if (loader) loader.remove();
+
+                if (!currentSessionId && data.session_id) {
+                    currentSessionId = data.session_id;
+                    window.history.pushState({}, '', `/chat/${currentSessionId}`);
+                }
+
+                if (data.messages_left !== undefined) {
+                    document.getElementById('quota-display').innerText = `${data.messages_left} / 100 Left`;
+                }
+
+                // --- WHATSAPP BUTTON LOGIC (RETAINED) ---
+                const botReply = data.reply;
+                const cleanReply = marked.parse(botReply);
+                let whatsappButton = "";
+
+                const phoneMatch = botReply.match(/\+?[0-9]{10,15}/);
+                if (phoneMatch) {
+                    const phoneNumber = phoneMatch[0].replace(/\s/g, '');
+                    whatsappButton = `
+                        <div class="mt-3">
+                            <a href="https://wa.me/${phoneNumber}?text=Hi, I am interested in your products!" 
+                               target="_blank" 
+                               class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-[11px] uppercase font-bold py-2 px-4 rounded-lg transition-all shadow-md no-underline">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                Message on WhatsApp
+                            </a>
+                        </div>`;
+                }
+
+                chatBox.innerHTML += `
+                    <div class="flex justify-start animate-fade">
+                        <div class="bg-gray-800 border border-gray-700 p-4 rounded-2xl rounded-tl-none max-w-[85%] shadow-md prose text-sm">
+                            ${cleanReply}
+                            ${whatsappButton}
+                        </div>
+                    </div>`;
+
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (e) { 
+                const loader = document.getElementById(typingId);
+                if (loader) loader.remove();
+                console.error("Error:", e); 
+            }
+        }
+
+        function startNewChat() { window.location.href = "/"; }
+        document.getElementById("user-input").addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
+        window.onload = () => { document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight; };
+    </script>
 </body>
+
 </html>
