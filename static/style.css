@@ -50,8 +50,7 @@ body {
 .chat-box {
     flex: 1;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
+    padding-bottom: 20px; /* Space so last message isn't hidden by input */
 }
 
 .message {
@@ -67,8 +66,7 @@ body {
 
 .message.bot {
     background-color: #444654;
-    border-top: 1px solid #565869;
-    border-bottom: 1px solid #565869;
+    border-bottom: 1px solid #202123;
 }
 
 .message-content {
@@ -141,7 +139,7 @@ body {
 }
 
 .chat-input button {
-    background-color: #10a37f;
+    background-color: #2563eb;
     color: white;
     border: none;
     padding: 10px 25px;
@@ -152,7 +150,7 @@ body {
 }
 
 .chat-input button:hover {
-    background-color: #0b8c6d;
+    background-color: #1d4ed8;
 }
 
 .chat-input button:disabled {
@@ -210,3 +208,22 @@ body {
 }
 
 .save-btn:hover { background-color: #0b8c6d; }
+/* whatapp button  css*/
+.wa-button {
+    background-color: #25D366; /* Official WhatsApp Green */
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 15px;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.wa-button:hover {
+    background-color: #128C7E;
+    transform: scale(1.02);
+}

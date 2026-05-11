@@ -1,33 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - AI Chat Agent</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Sign Up - AI Business Agent</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f4f9;">
-    <div
-        style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center;">
-        <h2 style="color: #4CAF50; margin-bottom: 20px;">Create an Account</h2>
+<body class="bg-gray-900 min-h-screen flex items-center justify-center px-6 text-white">
 
-        <form action="/signup" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
-            <input type="text" name="name" placeholder="Full Name" required
-                style="padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-            <input type="email" name="email" placeholder="Email Address" required
-                style="padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-            <input type="password" name="password" placeholder="Password" required
-                style="padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-            <button type="submit"
-                style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Sign
-                Up</button>
-        </form>
+    <div class="w-full max-w-md bg-gray-800 border border-gray-700 rounded-3xl shadow-2xl overflow-hidden">
 
-        <p style="margin-top: 20px; font-size: 14px;">Already have an account? <a href="/login"
-                style="color: #4CAF50; text-decoration: none;">Login here</a></p>
+        <div class="bg-blue-600 p-8 text-center">
+            <h1 class="text-3xl font-bold">Create Account</h1>
+            <p class="text-blue-100 mt-2 text-sm">
+                Start building your AI-powered business assistant
+            </p>
+        </div>
+
+        <div class="p-8">
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="bg-red-500/20 border border-red-500 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm">
+                {{ messages[0] }}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form action="/signup" method="POST" class="space-y-5">
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">
+                        Full Name
+                    </label>
+
+                    <input type="text"
+                        name="name"
+                        required autofocus placeholder="Enter your full name"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all">
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">
+                        Email Address
+                    </label>
+
+                    <input type="email"
+                        name="email"
+                        required
+                        placeholder="Enter your email"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all">
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">
+                        Password
+                    </label>
+
+                    <input type="password"
+                        name="password"
+                        required
+                        placeholder="Create password"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 outline-none focus:border-blue-500 transition-all">
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 transition-all py-3 rounded-xl font-semibold shadow-lg">
+                    Create Account
+                </button>
+
+            </form>
+
+            <p class="text-center text-sm text-gray-400 mt-6">
+                Already have an account?
+                <a href="/login" class="text-blue-400 hover:text-blue-300">
+                    Login
+                </a>
+            </p>
+
+        </div>
+
     </div>
-</body>
 
+</body>
 </html>
